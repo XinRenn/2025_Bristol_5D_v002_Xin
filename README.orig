@@ -1,0 +1,10 @@
+1.先修改Read_training_data.ipynb 定义自己想要build emulator的training data 的位置 
+2.training_data folder会自动建立,保存已经标准化好了的数据
+
+*前两步也可以省略，不然每次都会复制数据并保存，有可以不用保存数据而直接读取数据的办法。
+
+3.building emulator,读取core_code里面的脚本,然后运行,最后结果保存到emulator里面,作为emulator的核心部分可以直接读取
+
+optional 4.可以删除training_data文件夹,因为保存好了read_raw_data脚本，并且已经有emulator了，所以可以直接读取output里面的参数进行emulation
+
+5.结束step1,和step2后，该emulator就可以被读取并且使用了，此时可以转到prediction folder并且运行prediction的脚本
