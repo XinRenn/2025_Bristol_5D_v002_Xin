@@ -5,3 +5,4 @@ validation/
 prediction/test.addPI.sh
 prediction/run_validate.ipynb
 prediction/run_0-1myr_90ensemble.py
+modhighlowice_temp/
