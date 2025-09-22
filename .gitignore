@@ -1,0 +1,7 @@
+emulator_allvars/
+modhighice_temp_0.1forvalidation/
+modlowice_temp_0.1forvalidation/
+validation/
+prediction/test.addPI.sh
+prediction/run_validate.ipynb
+prediction/run_0-1myr_90ensemble.py

@@ -1,0 +1,6 @@
+
+		begin
+      f = addfile("/Users/bo20541/Library/CloudStorage/OneDrive-UniversityofBristol/TONIC-Oligocene/Emulator_Xin/2015_Bristol_5D_v001_Xin/validation/bilinterp_newdata.nc","r")
+      print(f)
+		end
+    

@@ -1,6 +1,7 @@
 # %% [markdown]
 # % 这个脚本建于已经read并write了所有temp和precip数据的R脚本之后，直接读取所有（100y）的模型输出数据。这一步可以被更改。
 # # 添加必要package
+# # test to ensure it's the same as Charlies' 20250219. Lines with modifications are marked with '#250219'
 
 # %%
 
@@ -27,12 +28,12 @@ import compute_covariance as cov_matrix
 # %%
 # Open the 5 variables sum for standardization
 #################################################
-nc_data = nc.Dataset("../emulator/emul_in_X_5variables_sum.nc")
+nc_data = nc.Dataset("../emulator/emul_in_X_5variables_mean_std.nc")
 var_names = list(nc_data.variables.keys())
 for var_name in var_names:
     globals()[var_name] = nc_data.variables[var_name][:]
  
-print("the 5 variables sum used to standardlize input forcings is:")
+print("the 5 variables sum used to standardlize input forcings are:")
 print(var_names)
 
 
@@ -95,12 +96,16 @@ x_full = pd.read_csv(prediction_input, sep='\s+', header=None)  # Read table
 nexp = x_full.shape[0] - 1 # Get the number of years
 index_nexp = np.arange(nexp) # Create an index for the number of years
 
+### update 250219: Normalize using mean and std instead of sum
+
 # Normalize input variables. Starts from 1 to skip the header
-var1 = x_full.iloc[1:,0].values.astype(float) / co2_sum          # Normalize `V1` by `co2_sum`
-var2 = x_full.iloc[1:,1].values.astype(float) / obliquity_sum    # Normalize `V2` by `obliquity_sum`
-var3 = x_full.iloc[1:,2].values.astype(float) / esinw_sum        # Normalize `V3` by `esinw_sum`
-var4 = x_full.iloc[1:,3].values.astype(float) / ecosw_sum        # Normalize `V4` by `ecosw_sum`
-var5 = x_full.iloc[1:,4].values.astype(float) / ice_sum          # Normalize ice volume by `ice_sum`
+var1_raw = x_full.iloc[1:,0].values.astype(float)                # the absolute value of CO2
+var1 = (np.log(var1_raw) - co2_mean) / co2_std                                # For CO2, we need to get the log of it first and then Normalize `V1` by `co2_sum`
+                                                                 
+var2 = (x_full.iloc[1:,1].values.astype(float) - obliquity_mean) / obliquity_std    # Normalize `V2` by `obliquity_sum`
+var3 = (x_full.iloc[1:,2].values.astype(float) - esinw_mean    ) / esinw_std        # Normalize `V3` by `esinw_sum`
+var4 = (x_full.iloc[1:,3].values.astype(float) - ecosw_mean    ) / ecosw_std        # Normalize `V4` by `ecosw_sum`
+var5 = (x_full.iloc[1:,4].values.astype(float) - ice_mean      ) / ice_std          # Normalize ice volume by `ice_sum`
 
 # make vector of all input variables at the current year
 x = np.array([var1, var2, var3, var4, var5])
@@ -109,18 +114,25 @@ print("The 5 input variable for prediction are:")
 print(x_full.head())
 print('... ...')
 
+# Print the head of normalized variables
+print("Normalized CO2 values (var1):", var1[:5])
+print("Normalized obliquity values (var2):", var2[:5])
+print("Normalized esinw values (var3):", var3[:5])
+print("Normalized ecosw values (var4):", var4[:5])
+print("Normalized ice volume values (var5):", var5[:5])
+
 
 # %% [markdown]
 # ## Visulisaztion of the input data to help understanding 
 
 # %%
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-plt.scatter(index_nexp, var1*co2_sum, label='CO2')
-plt.xlabel('year')
-plt.ylabel('CO2')
-plt.title('An example of input CO2 values')
-plt.show()
+# plt.scatter(index_nexp, np.exp((var1*co2_std)+co2_mean), label='CO2')
+# plt.xlabel('year')
+# plt.ylabel('CO2')
+# plt.title('An example of input CO2 values')
+# plt.show()
 
 
 # %% [markdown]
@@ -146,74 +158,76 @@ print('Predicted results include:',predic_var.keys())
 
 # %%
 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
-from IPython.display import HTML
-from mpl_toolkits.basemap import Basemap
+# import matplotlib.pyplot as plt
+# from matplotlib.animation import FuncAnimation, PillowWriter
+# from IPython.display import HTML
+# from mpl_toolkits.basemap import Basemap
 
-# 创建 figure 和轴对象
-fig, (ax, ax2) = plt.subplots(2, 1, figsize=(10, 12))
+# # 创建 figure 和轴对象
+# fig, (ax, ax2) = plt.subplots(2, 1, figsize=(10, 12))
 
-# 经纬度网格
-X, Y = np.meshgrid(PCs['lon'], PCs['lat'])
+# # 经纬度网格
+# X, Y = np.meshgrid(PCs['lon'], PCs['lat'])
 
-# Calculate weights based on latitude for weighted average
-weights = np.cos(np.deg2rad(PCs['lat']))
-weighted_mean = np.sum(predic_var['mean'] * weights[None, :, None], axis=1) / np.sum(weights)
-global_avg = np.mean(weighted_mean, axis=1)
+# # Calculate weights based on latitude for weighted average
+# weights = np.cos(np.deg2rad(PCs['lat']))
+# weighted_mean = np.sum(predic_var['mean'] * weights[None, :, None], axis=1) / np.sum(weights)
+# global_avg = np.mean(weighted_mean, axis=1)
 
 
-# 创建 Basemap（用于绘制海陆分界线）
-m = Basemap(projection='cyl', lon_0=180, resolution='c', ax=ax)
-m.drawcoastlines()
+# # 创建 Basemap（用于绘制海陆分界线）
+# m = Basemap(projection='cyl', lon_0=180, resolution='c', ax=ax)
+# m.drawcoastlines()
 
-# 初始绘图
-contour = ax.contourf(X, Y, predic_var['mean'][0], cmap='coolwarm', levels=np.linspace(-60, 60, 41))
-cbar = plt.colorbar(contour, ax=ax, orientation='vertical')
-cbar.set_label('predic_var (°C)')
-contour.collections
+# # 初始绘图
+# contour = ax.contourf(X, Y, predic_var['mean'][0], cmap='coolwarm', levels=np.linspace(-60, 60, 41))
+# cbar = plt.colorbar(contour, ax=ax, orientation='vertical')
+# cbar.set_label('predic_var (°C)')
+# contour.collections
 
-# 初始化函数
-def init():
-    ax.set_title('Time Step: 0')
-    return contour.collections
+# # 初始化函数
+# def init():
+#     ax.set_title('Time Step: 0')
+#     return contour.collections
 
-# 更新函数
-def update(frame):
-    ax.clear()
-    m.drawcoastlines()
+# # 更新函数
+# def update(frame):
+#     ax.clear()
+#     m.drawcoastlines()
     
-    # 更新等高线图
-    contour = ax.contourf(X, Y, predic_var['mean'][frame], cmap='coolwarm', levels=np.linspace(-60, 60, 41))
-    ax.set_title(f'Time Step: {frame}\n'
-                 f'CO2: {x_full.iloc[frame+1,0]}, '
-                 f'Obliquity: {x_full.iloc[frame+1,1]}, '
-                 f'esinw: {x_full.iloc[frame+1,2]}, '
-                 f'ecosw: {x_full.iloc[frame+1,3]}, '
-                 f'Ice: {x_full.iloc[frame+1,4]}')
+#     # 更新等高线图
+#     contour = ax.contourf(X, Y, predic_var['mean'][frame], cmap='coolwarm', levels=np.linspace(-60, 60, 41))
+#     ax.set_title(f'Time Step: {frame}\n'
+#                  f'CO2: {x_full.iloc[frame+1,0]}, '
+#                  f'Obliquity: {x_full.iloc[frame+1,1]}, '
+#                  f'esinw: {x_full.iloc[frame+1,2]}, '
+#                  f'ecosw: {x_full.iloc[frame+1,3]}, '
+#                  f'Ice: {x_full.iloc[frame+1,4]}')
     
-    # 更新散点图
-    ax2.clear()
-    ax2.scatter(index_nexp, global_avg, c='blue', label='Global Avg predic_var')
-    ax2.scatter(index_nexp[frame], global_avg[frame], c='red')  # 添加红点
-    ax2.set_xlabel('Year')
-    ax2.set_ylabel('Global Avg predic_var (°C)')
-    ax2.set_title('Global Average predic_var over Time')
-    ax2.legend()
+#     # 更新散点图
+#     ax2.clear()
+#     ax2.scatter(index_nexp, global_avg, c='blue', label='Global Avg predic_var')
+#     ax2.scatter(index_nexp[frame], global_avg[frame], c='red')  # 添加红点
+#     ax2.set_xlabel('Year')
+#     ax2.set_ylabel('Global Avg predic_var (°C)')
+#     ax2.set_title('Global Average predic_var over Time')
+#     ax2.legend()
     
-    return contour.collections
+#     return contour.collections
 
-# 创建动画
-if nexp > 100:
-    nframe = 100
-ani = FuncAnimation(fig, update, frames=range(nframe), init_func=init, blit=False)
+# # 创建动画
+# if nexp > 100:
+#     nframe = 100
+# else:
+#     nframe = nexp
+# ani = FuncAnimation(fig, update, frames=range(nframe), init_func=init, blit=False)
 
-# 保存动画为 GIF 文件
-if os.path.exists(prediction_output[:-3]+".gif"):
-    now = datetime.datetime.now().strftime("%Y%m%d")
-    os.rename(prediction_output[:-3]+".gif", prediction_output[:-3] + "_" + now + ".gif")
+# # 保存动画为 GIF 文件
+# if os.path.exists(prediction_output[:-3]+".gif"):
+#     now = datetime.datetime.now().strftime("%Y%m%d")
+#     os.rename(prediction_output[:-3]+".gif", prediction_output[:-3] + "_" + now + ".gif")
 
-ani.save(prediction_output[:-3]+".gif", writer=PillowWriter(fps=10))
+# ani.save(prediction_output[:-3]+".gif", writer=PillowWriter(fps=10))
 
 
 # %% [markdown]

@@ -1,13 +1,13 @@
 
 # Building a new emulator 搭建一个新的Emulator
 
-1. Duplicate the folder of '2015_Bristol_5D_v001_Xin/modlowice_temp' and rename the folder with **the name of emulator**
+1. Duplicate the folder of '2025_Bristol_5D_v002_Xin/modlowice_temp' and rename the folder with **the name of emulator**
 2. Clean the file in 'emulator/' and 'training_data/'
 3. **Edit step1.** to read in raw training data and formating them. Then run.
 4. *if needed. Edit hyperparameters in step2. Then run.
 5. *optional. ca delete the data in training_data/
 
-Finilizing: success if there're 3 files be created in emulator/: emul_in_X_5variables_sum.nc emul_in_Y_PCA.nc GPList.h5\
+Finilizing: success if there're 3 files be created in emulator/: emul_in_X_5variables_mean_std.nc emul_in_Y_PCA.nc GPList.h5\
 
 Now the emulator is ready to use!
 
